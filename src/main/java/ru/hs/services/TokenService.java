@@ -7,8 +7,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
 import ru.hs.dtos.AccessToken;
 import ru.hs.services.config.TokenServiceProperties;
 
@@ -34,6 +36,7 @@ public class TokenService {
 
         webClient = WebClient
                 .builder()
+                .filter(logRequest())
                 .baseUrl(properties.getBaseUrl())
                 .clientConnector(connector)
                 .build();
@@ -53,11 +56,11 @@ public class TokenService {
                 .doOnError(throwable -> {
                     if (throwable instanceof WebClientResponseException) {
                         log.error(((WebClientResponseException) throwable).getResponseBodyAsString());
-                    }
-                    else {
+                    } else {
                         log.error(throwable.getMessage());
                     }
                 })
+                .doOnSuccess(response -> log.info("Received response from token api: {}", response))
                 .block();
         try {
             token = mapper.readValue(rs, AccessToken.class);
@@ -69,10 +72,11 @@ public class TokenService {
     }
 
     private boolean isTokenExpired() {
-        return token.getExpiresAfter().isBefore(Instant.now());
+        log.info("is token expired: {}", token.getExpiresAfter().isBefore(Instant.now()));
+        return false;
     }
 
-    private String getToken() {
+    public String getToken() {
         try {
             lock.lock();
             if (isTokenExpired()) {
@@ -82,5 +86,12 @@ public class TokenService {
         } finally {
             lock.unlock();
         }
+    }
+
+    private ExchangeFilterFunction logRequest() {
+        return ExchangeFilterFunction.ofRequestProcessor(clientRequest -> {
+            log.info("Prepared {} request by Token Service to url: {}", clientRequest.method(), clientRequest.url());
+            return Mono.just(clientRequest);
+        });
     }
 }

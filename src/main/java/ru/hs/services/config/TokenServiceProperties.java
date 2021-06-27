@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.Map;
 
 @Data
-@ConfigurationProperties(prefix = "token.service")
+@ConfigurationProperties(prefix = "service.token")
 public class TokenServiceProperties {
     private String baseUrl;
     private String mediaType;
