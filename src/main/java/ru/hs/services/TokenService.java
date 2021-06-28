@@ -72,8 +72,7 @@ public class TokenService {
     }
 
     private boolean isTokenExpired() {
-        log.info("is token expired: {}", token.getExpiresAfter().isBefore(Instant.now()));
-        return false;
+        return token.getExpiresAfter().isBefore(Instant.now());
     }
 
     public String getToken() {
